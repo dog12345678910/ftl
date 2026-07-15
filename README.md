@@ -178,10 +178,28 @@ on a cron schedule. Add a repo secret `MONITOR_CONFIG` holding your
 `config.json` (with a headless notifier), and state is cached between runs so
 you only get alerted on real restocks.
 
+## Verify it works on your network
+
+Run one product once with verbose logging — it prints the parsed result or a
+clear error:
+
+```bash
+python -m footlocker_monitor --watch 314206561604 --once -v
+# 12:00:01 INFO    [314206561604] Jordan Retro 1 High OG — IN STOCK
+```
+
+The bot needs outbound access to the store's domain (e.g. `footlocker.com`).
+Some locked-down networks — corporate proxies, and many cloud/CI sandboxes —
+block it at the egress layer; you'll see a proxy/connection error rather than an
+HTTP status. If so, run the bot from a network that can reach the site (a home
+connection, a VPS, etc.). The full fetch→parse→alert pipeline is covered by an
+integration test over a real socket (`tests/test_integration.py`).
+
 ## Getting blocked?
 
 If you see `HTTP 403` / `HTTP 429` or "response was not JSON", Foot Locker is
-serving a bot-challenge page. Options, in order of effort:
+serving a bot-challenge page (its edge reached you but flagged the request).
+Options, in order of effort:
 
 1. **Slow down** — raise `interval_seconds` and `per_product_delay`.
 2. **Add browser cookies** — open footlocker.com in a browser, copy your
@@ -212,7 +230,7 @@ stock on startup).
 
 ```bash
 pip install -r requirements.txt pytest
-python -m pytest          # 41 tests, no network required
+python -m pytest          # 42 tests (incl. a real-socket integration test)
 ```
 
 Layout:
