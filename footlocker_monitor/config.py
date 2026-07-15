@@ -30,11 +30,13 @@ class Config:
     proxies: dict[str, str] = field(default_factory=dict)
     cookies: dict[str, str] = field(default_factory=dict)
     headers: dict[str, str] = field(default_factory=dict)
-    pdp_template: str = "https://www.footlocker.com/api/products/pdp/{sku}"
+    # Empty = use each retailer's own PDP endpoint. Set to override globally.
+    pdp_template: str = ""
     timeout: float = 15.0
     max_retries: int = 3
 
     state_file: str = "monitor_state.json"
+    history_file: str = "monitor_history.jsonl"
 
     @classmethod
     def load(cls, path: str) -> "Config":
@@ -58,7 +60,7 @@ class Config:
             "alert_on_first_seen", "track_price_drops",
             "active_start_hour", "active_end_hour",
             "proxies", "cookies", "headers", "pdp_template", "timeout",
-            "max_retries", "state_file",
+            "max_retries", "state_file", "history_file",
         }
         kwargs = {k: raw[k] for k in known if k in raw}
         return cls(watch=watch, notifiers=notifiers, **kwargs)

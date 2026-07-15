@@ -1,6 +1,7 @@
 # Local runtime config & state (contain your webhooks / tokens / cookies)
 config.json
 monitor_state.json
+monitor_history.jsonl
 *.state.json
 
 # Python

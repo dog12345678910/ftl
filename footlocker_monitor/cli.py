@@ -34,6 +34,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="Override the base poll interval, in seconds.",
     )
     parser.add_argument(
+        "--dashboard", action="store_true",
+        help="Serve a live web dashboard while monitoring.",
+    )
+    parser.add_argument(
+        "--serve-only", action="store_true",
+        help="With --dashboard, show the dashboard without running the monitor "
+             "loop (e.g. to view state written by another process).",
+    )
+    parser.add_argument(
+        "--port", type=int, default=8000,
+        help="Port for the --dashboard web server (default: 8000).",
+    )
+    parser.add_argument(
         "-v", "--verbose", action="store_true", help="Enable debug logging.",
     )
     return parser
@@ -64,6 +77,12 @@ def main(argv: list[str] | None = None) -> int:
     except (FileNotFoundError, ValueError) as exc:
         print(f"Configuration error: {exc}", file=sys.stderr)
         return 2
+
+    if args.dashboard:
+        from .dashboard import serve
+
+        serve(config, port=args.port, run_monitor=not args.serve_only)
+        return 0
 
     monitor = Monitor(config)
     if args.once:

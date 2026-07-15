@@ -60,6 +60,7 @@ class WatchedProduct:
     name: str = ""
     sizes: list[str] = field(default_factory=list)
     target_price: Optional[float] = None
+    retailer: str = "footlocker"
 
     @classmethod
     def from_config(cls, entry: dict | str) -> "WatchedProduct":
@@ -75,12 +76,14 @@ class WatchedProduct:
 
         sizes = [str(s).strip() for s in entry.get("sizes", []) if str(s).strip()]
         target = entry.get("target_price")
+        retailer = str(entry.get("retailer") or "").strip() or _detect_retailer(url)
         return cls(
             sku=sku,
             url=url,
             name=str(entry.get("name") or "").strip(),
             sizes=sizes,
             target_price=parse_price(target) if target is not None else None,
+            retailer=retailer,
         )
 
     @classmethod
@@ -90,12 +93,23 @@ class WatchedProduct:
         if not sku:
             raise ValueError(f"could not extract a sku from: {value!r}")
         url = value if value.startswith("http") else ""
-        return cls(sku=sku, url=url)
+        return cls(sku=sku, url=url, retailer=_detect_retailer(url))
 
     def wants_size(self, size: str) -> bool:
         if not self.sizes:
             return True
         return _normalize_size(size) in {_normalize_size(s) for s in self.sizes}
+
+
+def _detect_retailer(url: str) -> str:
+    """Infer retailer id from a URL, defaulting to Foot Locker.
+
+    Imported lazily to avoid a circular import (``retailers`` depends on the
+    parser, which depends on this module).
+    """
+    from .retailers import DEFAULT_RETAILER, detect_retailer
+
+    return detect_retailer(url) or DEFAULT_RETAILER
 
 
 def parse_price(value: object) -> Optional[float]:

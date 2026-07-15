@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+import time
 from dataclasses import dataclass
 from typing import Optional
 
@@ -67,13 +68,42 @@ class StateStore:
                 os.remove(tmp)
             raise
 
+    def snapshot(self) -> list[dict]:
+        """Current per-product state, newest-checked first — for the dashboard."""
+        rows = []
+        for sku, entry in self._data.items():
+            sizes = entry.get("sizes", {})
+            rows.append({
+                "sku": sku,
+                "name": entry.get("name", sku),
+                "url": entry.get("url", ""),
+                "retailer": entry.get("retailer", ""),
+                "in_stock": entry.get("in_stock", False),
+                "available_sizes": [s for s, ok in sizes.items() if ok],
+                "price": entry.get("price"),
+                "checked_at": entry.get("checked_at"),
+                "error": entry.get("error"),
+            })
+        rows.sort(key=lambda r: r.get("checked_at") or 0, reverse=True)
+        return rows
+
     def evaluate(
         self, watched: WatchedProduct, status: ProductStatus
     ) -> Optional[RestockEvent]:
         """Compare ``status`` against stored state and return a RestockEvent
         if something the user cares about just came into stock."""
+        now = time.time()
         if status.error:
-            return None  # Don't overwrite good state on a transient failure.
+            # Record that we checked (and why it failed) without clobbering the
+            # last-known-good availability, then bail — no alert on failures.
+            entry = self._data.get(status.sku, {})
+            entry.setdefault("name", status.name)
+            entry.setdefault("url", status.url)
+            entry.setdefault("retailer", watched.retailer)
+            entry["checked_at"] = now
+            entry["error"] = status.error
+            self._data[status.sku] = entry
+            return None
 
         prev = self._data.get(status.sku)
         first_seen = prev is None
@@ -102,6 +132,10 @@ class StateStore:
             "sizes": status.size_state(),
             "name": status.name,
             "price": status.price,
+            "url": status.url,
+            "retailer": watched.retailer,
+            "checked_at": now,
+            "error": None,
         }
 
         if restocked:

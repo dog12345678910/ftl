@@ -1,18 +1,21 @@
 # Foot Locker Restock Monitor
 
-A lightweight bot that polls Foot Locker product pages throughout the day and
-alerts you the moment a watched sneaker — or a specific size — comes back in
-stock. It only notifies on the **out-of-stock → in-stock transition**, so you
-get one ping per restock instead of a stream of noise.
+A lightweight bot that watches for **limited/hyped sneakers that restock at
+random throughout the day** and pings you the moment a watched shoe — or a
+specific size — comes back in stock. It only notifies on the **out-of-stock →
+in-stock transition**, so you get one alert per restock instead of a stream of
+noise.
 
 - 👟 Watch any number of products by URL or SKU
+- 🏬 **Multiple stores**: Foot Locker, Kids Foot Locker, Champs Sports, Footaction (auto-detected from the URL)
 - 📏 Filter alerts down to the sizes you actually want
-- 💸 Optional **price-drop alerts** (per-fall, or when a target price is hit)
-- 🔔 Notify via console, desktop, Discord, Telegram, email, Slack, or a generic webhook (mix and match)
+- 🔔 Notify via console, desktop, Discord, Telegram, email, **SMS (Twilio)**, Slack, or a generic webhook (mix and match)
+- 📊 Optional **live web dashboard** showing current stock + a restock feed
 - 🕗 Optional active-hours window and randomized polling to look less bot-like
 - 💾 Persistent state — survives restarts, alerts only on real changes
 - ⏱️ Run continuously (`run_forever`) or once per invocation (great for cron)
 - 🐳 Ship it with Docker, systemd, or a scheduled GitHub Action
+- 💸 Optional extra: price-drop alerts (per-fall, or when a target price is hit)
 
 > **Personal-use monitor.** This checks public product pages for your own
 > restock notifications. It does **not** auto-checkout, bypass queues, or defeat
@@ -73,6 +76,7 @@ The **SKU** is the number at the end of a Foot Locker product URL
 | `discord`  | `webhook_url` (opt: `mention`)       | Server Settings → Integrations → Webhooks.  |
 | `telegram` | `bot_token`, `chat_id`               | Create a bot with @BotFather.               |
 | `email`    | `host`, `username`, `password`, `to` | SMTP; opt `port` (587), `from_addr`, `use_tls`. Gmail: use an app password. |
+| `sms`      | `account_sid`, `auth_token`, `from_number`, `to` | Twilio SMS — instant phone alert. `to` may be a list. |
 | `slack`    | `url`                                | Slack incoming webhook.                     |
 | `webhook`  | `url` (opt: `headers`)               | Generic JSON POST — IFTTT, Zapier, n8n, Home Assistant, your own service. |
 
@@ -101,6 +105,25 @@ drops below your number:
 { "name": "Nike Dunk Low", "sku": "316153042104", "target_price": 90 }
 ```
 
+### Multiple stores
+
+Foot Locker runs several banners on the same platform, and the monitor watches
+all of them. The store is **auto-detected from the product URL**:
+
+| Retailer id     | Site                  |
+|-----------------|-----------------------|
+| `footlocker`    | footlocker.com        |
+| `kidsfootlocker`| kidsfootlocker.com    |
+| `champssports`  | champssports.com      |
+| `footaction`    | footaction.com        |
+
+```jsonc
+"watch": [
+  { "url": "https://www.champssports.com/product/~/316153042104.html" },
+  { "sku": "314206561604", "retailer": "kidsfootlocker" }   // set it explicitly when you only give a sku
+]
+```
+
 ## Run
 
 ```bash
@@ -113,7 +136,19 @@ python -m footlocker_monitor -c config.json --once
 # Quick ad-hoc watch, no config file needed
 python -m footlocker_monitor --watch https://www.footlocker.com/product/~/314206561604.html
 python -m footlocker_monitor --watch 316153042104 --interval 120
+
+# Monitor AND serve a live web dashboard at http://localhost:8000
+python -m footlocker_monitor -c config.json --dashboard --port 8000
 ```
+
+### Web dashboard
+
+`--dashboard` runs the monitor loop and a small web UI together in one process.
+The page (auto-refreshing every 15s) shows each watched product's current stock,
+available sizes, price, which store it's from, and when it was last checked —
+plus a live feed of recent restocks. It's built on the standard library (no
+extra dependencies), and a JSON version is served at `/api/status`. Add
+`--serve-only` to view state written by another process without polling here.
 
 Run every 2 minutes via cron instead of a long-lived process:
 
@@ -177,7 +212,7 @@ stock on startup).
 
 ```bash
 pip install -r requirements.txt pytest
-python -m pytest          # 26 tests, no network required
+python -m pytest          # 41 tests, no network required
 ```
 
 Layout:
@@ -187,8 +222,12 @@ footlocker_monitor/
   cli.py         # argparse entrypoint
   config.py      # JSON config loading/validation
   monitor.py     # the polling loop
-  scraper.py     # PDP fetch + defensive JSON parsing
+  scraper.py     # HTTP layer: per-retailer PDP fetch with retries
+  parsing.py     # defensive PDP JSON -> ProductStatus
+  retailers/     # store definitions (FL / Kids FL / Champs / Footaction) + URL detection
   state.py       # persistence + restock/price-drop change-detection
+  history.py     # append-only event log (feeds the dashboard)
+  dashboard.py   # stdlib web UI + /api/status
   product.py     # data models, SKU extraction, size matching, price parsing
-  notifiers/     # console / desktop / discord / telegram / email / slack / webhook
+  notifiers/     # console / desktop / discord / telegram / email / sms / slack / webhook
 ```

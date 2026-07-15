@@ -7,9 +7,10 @@ import logging
 import random
 import time
 
+from . import history
 from .config import Config
 from .notifiers import Notifier, build_notifiers
-from .scraper import FootLockerScraper
+from .scraper import Scraper
 from .state import RestockEvent, StateStore
 
 log = logging.getLogger(__name__)
@@ -18,7 +19,7 @@ log = logging.getLogger(__name__)
 class Monitor:
     def __init__(self, config: Config) -> None:
         self.config = config
-        self.scraper = FootLockerScraper(
+        self.scraper = Scraper(
             pdp_template=config.pdp_template,
             headers=config.headers,
             cookies=config.cookies,
@@ -49,6 +50,7 @@ class Monitor:
                 time.sleep(self.config.per_product_delay)
 
         self.state.save()
+        history.append_events(self.config.history_file, events)
         for event in events:
             self._dispatch(event)
         return events
