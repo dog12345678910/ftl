@@ -20,6 +20,7 @@ class Config:
     jitter_seconds: int = 30            # random 0..jitter added to each sleep
     per_product_delay: float = 1.5      # spacing between product requests
     alert_on_first_seen: bool = False   # alert for already-in-stock on run 1?
+    track_price_drops: bool = False     # also alert when a price falls?
 
     # Active-hours window (24h clock, local time). None = run 24/7.
     active_start_hour: int | None = None   # e.g. 8  -> start monitoring at 08:00
@@ -54,7 +55,8 @@ class Config:
 
         known = {
             "interval_seconds", "jitter_seconds", "per_product_delay",
-            "alert_on_first_seen", "active_start_hour", "active_end_hour",
+            "alert_on_first_seen", "track_price_drops",
+            "active_start_hour", "active_end_hour",
             "proxies", "cookies", "headers", "pdp_template", "timeout",
             "max_retries", "state_file",
         }

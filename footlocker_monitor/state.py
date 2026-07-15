@@ -8,12 +8,16 @@ import tempfile
 from dataclasses import dataclass
 from typing import Optional
 
-from .product import ProductStatus, WatchedProduct
+from .product import ProductStatus, WatchedProduct, parse_price
 
 
 @dataclass
 class RestockEvent:
-    """Emitted when a watched product/size transitions into stock."""
+    """Emitted when a watched product changes in a way the user cares about.
+
+    ``kind`` is one of ``"restock"`` (out-of-stock -> in-stock), ``"in_stock"``
+    (already available on first sighting), or ``"price_drop"``.
+    """
 
     sku: str
     name: str
@@ -22,6 +26,8 @@ class RestockEvent:
     price: Optional[str] = None
     image: Optional[str] = None
     first_seen: bool = False
+    kind: str = "restock"
+    previous_price: Optional[str] = None
 
 
 class StateStore:
@@ -32,8 +38,9 @@ class StateStore:
     ``first_seen=True`` (callers can choose to suppress those).
     """
 
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: str, track_price_drops: bool = False) -> None:
         self.path = path
+        self.track_price_drops = track_price_drops
         self._data: dict[str, dict] = self._load()
 
     def _load(self) -> dict[str, dict]:
@@ -72,6 +79,7 @@ class StateStore:
         first_seen = prev is None
         prev_sizes: dict[str, bool] = (prev or {}).get("sizes", {})
         prev_in_stock: bool = (prev or {}).get("in_stock", False)
+        prev_price: Optional[str] = (prev or {}).get("price")
 
         newly_available: list[str] = []
         if status.sizes:
@@ -81,27 +89,73 @@ class StateStore:
                 was_in_stock = prev_sizes.get(s.size, False)
                 if not was_in_stock:
                     newly_available.append(s.size)
-            triggered = bool(newly_available)
+            restocked = bool(newly_available)
         else:
             # No size granularity: trigger on product-level OOS -> in-stock.
-            triggered = status.in_stock and not prev_in_stock
+            restocked = status.in_stock and not prev_in_stock
+
+        price_drop = self._detect_price_drop(watched, status, prev_price, first_seen)
 
         # Record the new state regardless of whether we alert.
         self._data[status.sku] = {
             "in_stock": status.in_stock,
             "sizes": status.size_state(),
             "name": status.name,
+            "price": status.price,
         }
 
-        if not triggered:
-            return None
+        if restocked:
+            return RestockEvent(
+                sku=status.sku,
+                name=status.name,
+                url=status.url,
+                newly_available_sizes=newly_available or status.available_sizes,
+                price=status.price,
+                image=status.image,
+                first_seen=first_seen,
+                kind="in_stock" if first_seen else "restock",
+                previous_price=prev_price,
+            )
 
-        return RestockEvent(
-            sku=status.sku,
-            name=status.name,
-            url=status.url,
-            newly_available_sizes=newly_available or status.available_sizes,
-            price=status.price,
-            image=status.image,
-            first_seen=first_seen,
-        )
+        if price_drop:
+            return RestockEvent(
+                sku=status.sku,
+                name=status.name,
+                url=status.url,
+                newly_available_sizes=status.available_sizes,
+                price=status.price,
+                image=status.image,
+                first_seen=False,
+                kind="price_drop",
+                previous_price=prev_price,
+            )
+
+        return None
+
+    def _detect_price_drop(
+        self,
+        watched: WatchedProduct,
+        status: ProductStatus,
+        prev_price: Optional[str],
+        first_seen: bool,
+    ) -> bool:
+        """A price drop is a fall vs the last-seen price, or crossing a
+        configured ``target_price`` for the first time."""
+        if not self.track_price_drops:
+            return False
+        current = parse_price(status.price)
+        if current is None:
+            return False
+
+        # Target-price crossing: alert once when at/under target and we
+        # weren't already under it last time.
+        if watched.target_price is not None and current <= watched.target_price:
+            previous = parse_price(prev_price)
+            if previous is None or previous > watched.target_price:
+                return True
+
+        if first_seen:
+            return False  # no baseline to compare against yet
+
+        previous = parse_price(prev_price)
+        return previous is not None and current < previous

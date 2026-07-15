@@ -8,13 +8,18 @@ from .base import Notifier
 from .console import ConsoleNotifier
 from .desktop import DesktopNotifier
 from .discord import DiscordNotifier
+from .email import EmailNotifier
 from .telegram import TelegramNotifier
+from .webhook import SlackNotifier, WebhookNotifier
 
 _REGISTRY: dict[str, type[Notifier]] = {
     "console": ConsoleNotifier,
     "desktop": DesktopNotifier,
     "discord": DiscordNotifier,
+    "email": EmailNotifier,
+    "slack": SlackNotifier,
     "telegram": TelegramNotifier,
+    "webhook": WebhookNotifier,
 }
 
 
@@ -38,6 +43,9 @@ __all__ = [
     "ConsoleNotifier",
     "DesktopNotifier",
     "DiscordNotifier",
+    "EmailNotifier",
+    "SlackNotifier",
     "TelegramNotifier",
+    "WebhookNotifier",
     "build_notifiers",
 ]

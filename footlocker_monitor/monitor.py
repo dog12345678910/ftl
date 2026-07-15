@@ -26,7 +26,7 @@ class Monitor:
             timeout=config.timeout,
             max_retries=config.max_retries,
         )
-        self.state = StateStore(config.state_file)
+        self.state = StateStore(config.state_file, track_price_drops=config.track_price_drops)
         self.notifiers: list[Notifier] = build_notifiers(config.notifiers)
 
     # -- one sweep over every watched product ------------------------------

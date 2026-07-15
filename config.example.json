@@ -8,7 +8,8 @@
     {
       "name": "Nike Dunk Low",
       "sku": "316153042104",
-      "sizes": []
+      "sizes": [],
+      "target_price": 90
     }
   ],
 
@@ -21,6 +22,7 @@
   "jitter_seconds": 30,
   "per_product_delay": 1.5,
   "alert_on_first_seen": false,
+  "track_price_drops": true,
 
   "active_start_hour": 8,
   "active_end_hour": 23,
@@ -29,9 +31,14 @@
 
   "_notes": {
     "sizes": "Empty list means alert on ANY restock; otherwise only these sizes.",
+    "target_price": "Optional per-product: alert when price falls to/below this.",
+    "track_price_drops": "Master switch for price-drop alerts (per-price-fall).",
     "active_hours": "Set both to null (remove them) to monitor 24/7.",
     "discord_example": { "type": "discord", "webhook_url": "https://discord.com/api/webhooks/XXX/YYY", "mention": "@everyone" },
     "telegram_example": { "type": "telegram", "bot_token": "123:ABC", "chat_id": "123456789" },
+    "email_example": { "type": "email", "host": "smtp.gmail.com", "port": 587, "username": "you@gmail.com", "password": "app-password", "to": "you@gmail.com" },
+    "slack_example": { "type": "slack", "url": "https://hooks.slack.com/services/XXX/YYY/ZZZ" },
+    "webhook_example": { "type": "webhook", "url": "https://example.com/hook", "headers": { "Authorization": "Bearer TOKEN" } },
     "proxy_and_cookies": "If you hit HTTP 403/429, add a 'proxies' and/or 'cookies' object; see README."
   }
 }

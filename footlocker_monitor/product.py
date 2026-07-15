@@ -52,12 +52,14 @@ class WatchedProduct:
 
     ``sku`` is required for the API lookup. ``sizes`` optionally restricts
     alerts to specific size(s); if empty, any restock triggers an alert.
+    ``target_price`` optionally alerts when the price drops to/below a value.
     """
 
     sku: str
     url: str = ""
     name: str = ""
     sizes: list[str] = field(default_factory=list)
+    target_price: Optional[float] = None
 
     @classmethod
     def from_config(cls, entry: dict | str) -> "WatchedProduct":
@@ -72,7 +74,14 @@ class WatchedProduct:
             raise ValueError(f"watch entry missing a resolvable sku: {entry!r}")
 
         sizes = [str(s).strip() for s in entry.get("sizes", []) if str(s).strip()]
-        return cls(sku=sku, url=url, name=str(entry.get("name") or "").strip(), sizes=sizes)
+        target = entry.get("target_price")
+        return cls(
+            sku=sku,
+            url=url,
+            name=str(entry.get("name") or "").strip(),
+            sizes=sizes,
+            target_price=parse_price(target) if target is not None else None,
+        )
 
     @classmethod
     def from_url_or_sku(cls, value: str) -> "WatchedProduct":
@@ -87,6 +96,25 @@ class WatchedProduct:
         if not self.sizes:
             return True
         return _normalize_size(size) in {_normalize_size(s) for s in self.sizes}
+
+
+def parse_price(value: object) -> Optional[float]:
+    """Parse a price like ``"$180.00"``, ``"180"`` or ``180.0`` into a float.
+
+    Returns ``None`` when no number can be found (so callers can skip
+    price comparisons rather than crash on odd formatting).
+    """
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    match = re.search(r"\d[\d,]*(?:\.\d+)?", str(value))
+    if not match:
+        return None
+    try:
+        return float(match.group(0).replace(",", ""))
+    except ValueError:
+        return None
 
 
 def extract_sku(url: str) -> Optional[str]:

@@ -17,9 +17,15 @@ class Notifier(ABC):
 
     # -- shared helpers -----------------------------------------------------
 
-    @staticmethod
-    def format_title(event: RestockEvent) -> str:
-        prefix = "👟 IN STOCK" if event.first_seen else "🔔 RESTOCK"
+    _PREFIXES = {
+        "restock": "🔔 RESTOCK",
+        "in_stock": "👟 IN STOCK",
+        "price_drop": "💸 PRICE DROP",
+    }
+
+    @classmethod
+    def format_title(cls, event: RestockEvent) -> str:
+        prefix = cls._PREFIXES.get(event.kind, "🔔 RESTOCK")
         return f"{prefix}: {event.name}"
 
     @staticmethod
@@ -27,7 +33,9 @@ class Notifier(ABC):
         lines = []
         if event.newly_available_sizes:
             lines.append("Sizes: " + ", ".join(event.newly_available_sizes))
-        if event.price:
+        if event.kind == "price_drop" and event.previous_price and event.price:
+            lines.append(f"Price: {event.previous_price} → {event.price}")
+        elif event.price:
             lines.append(f"Price: {event.price}")
         lines.append(event.url)
         return "\n".join(lines)

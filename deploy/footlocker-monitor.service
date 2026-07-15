@@ -1,0 +1,24 @@
+# systemd unit for running the monitor as a background service on Linux.
+#
+# Install:
+#   sudo cp deploy/footlocker-monitor.service /etc/systemd/system/
+#   # edit WorkingDirectory / User / ExecStart paths below to match your setup
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now footlocker-monitor
+#   journalctl -u footlocker-monitor -f     # watch the logs
+
+[Unit]
+Description=Foot Locker Restock Monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=YOUR_USER
+WorkingDirectory=/opt/footlocker-monitor
+ExecStart=/usr/bin/python3 -m footlocker_monitor -c /opt/footlocker-monitor/config.json
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
