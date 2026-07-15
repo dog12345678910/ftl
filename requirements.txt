@@ -1,0 +1,4 @@
+requests>=2.28
+# Optional: nicer native desktop notifications. Falls back to notify-send /
+# osascript / no-op if absent.
+# plyer>=2.1

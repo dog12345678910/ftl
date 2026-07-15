@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "footlocker-monitor"
+version = "0.1.0"
+description = "A bot that monitors Foot Locker for restocks throughout the day."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["requests>=2.28"]
+
+[project.optional-dependencies]
+desktop = ["plyer>=2.1"]
+dev = ["pytest>=7"]
+
+[project.scripts]
+footlocker-monitor = "footlocker_monitor.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["footlocker_monitor*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
