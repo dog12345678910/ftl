@@ -178,6 +178,26 @@ on a cron schedule. Add a repo secret `MONITOR_CONFIG` holding your
 `config.json` (with a headless notifier), and state is cached between runs so
 you only get alerted on real restocks.
 
+### Dashboard on Vercel
+
+You can host the **dashboard view** on Vercel (`vercel.json`, `api/status.py`,
+`public/index.html`). Deploy by importing the repo at
+[vercel.com/new](https://vercel.com/new), or:
+
+```bash
+npm i -g vercel && vercel        # from the repo root, follow the prompts
+```
+
+> **Important:** Vercel is serverless — it **cannot** run the always-on monitor
+> loop, keep a persistent state file, or send alerts, and its datacenter IPs are
+> blocked by Foot Locker's Akamai edge. So the Vercel page shows **sample data**
+> by default, purely so you can see the UI. To show *live* data, run the actual
+> bot on a persistent host (your machine / a VPS / Docker), publish its
+> `monitor_state.json` somewhere reachable, and set the `MONITOR_STATE_URL`
+> environment variable in your Vercel project — `api/status.py` will proxy it.
+> The real monitoring, restock detection, and notifications always run in the
+> bot, not on Vercel.
+
 ## Verify it works on your network
 
 Run one product once with verbose logging — it prints the parsed result or a
