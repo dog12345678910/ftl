@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime as dt
 import logging
 import random
+import threading
 import time
 
 from . import history
@@ -29,12 +30,21 @@ class Monitor:
         )
         self.state = StateStore(config.state_file, track_price_drops=config.track_price_drops)
         self.notifiers: list[Notifier] = build_notifiers(config.notifiers)
+        # Serializes sweeps so the background loop and a UI-triggered "check
+        # now" can't run (and write state) at the same time.
+        self._sweep_lock = threading.Lock()
 
     # -- one sweep over every watched product ------------------------------
 
     def check_once(self) -> list[RestockEvent]:
+        with self._sweep_lock:
+            return self._sweep()
+
+    def _sweep(self) -> list[RestockEvent]:
         events: list[RestockEvent] = []
-        for i, watched in enumerate(self.config.watch):
+        # Snapshot the watch list so a concurrent UI edit can't disturb the loop.
+        watch = list(self.config.watch)
+        for i, watched in enumerate(watch):
             status = self.scraper.fetch(watched)
             if status.error:
                 log.warning("[%s] %s", watched.sku, status.error)
@@ -46,7 +56,7 @@ class Monitor:
             if event and (not event.first_seen or self.config.alert_on_first_seen):
                 events.append(event)
 
-            if i < len(self.config.watch) - 1 and self.config.per_product_delay > 0:
+            if i < len(watch) - 1 and self.config.per_product_delay > 0:
                 time.sleep(self.config.per_product_delay)
 
         self.state.save()

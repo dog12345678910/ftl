@@ -141,14 +141,25 @@ python -m footlocker_monitor --watch 316153042104 --interval 120
 python -m footlocker_monitor -c config.json --dashboard --port 8000
 ```
 
-### Web dashboard
+### Web dashboard / control panel
 
-`--dashboard` runs the monitor loop and a small web UI together in one process.
-The page (auto-refreshing every 15s) shows each watched product's current stock,
-available sizes, price, which store it's from, and when it was last checked —
-plus a live feed of recent restocks. It's built on the standard library (no
-extra dependencies), and a JSON version is served at `/api/status`. Add
-`--serve-only` to view state written by another process without polling here.
+`--dashboard` runs the monitor loop and a web UI together in one process, so you
+can manage everything from the browser instead of editing `config.json`:
+
+- **Add a shoe** — paste a Foot Locker URL or SKU (optionally sizes) and click Add
+- **Remove** a shoe with one click
+- **Check now** — trigger an instant sweep
+- Live stock, available sizes, price, store, and last-checked time per product
+- A feed of recent restocks
+
+Edits are saved straight back to your `config.json`, so they survive restarts.
+It's built on the standard library (no extra dependencies); a JSON version is at
+`/api/status`. Notes:
+
+- You can start with an **empty** watch list and add everything from the UI.
+- Bind to this machine only with `--host 127.0.0.1` (default `0.0.0.0` is
+  reachable on your LAN / from Docker).
+- `--serve-only` shows the dashboard without running the monitor loop.
 
 Run every 2 minutes via cron instead of a long-lived process:
 
@@ -250,7 +261,7 @@ stock on startup).
 
 ```bash
 pip install -r requirements.txt pytest
-python -m pytest          # 42 tests (incl. a real-socket integration test)
+python -m pytest          # 49 tests (incl. a real-socket integration test)
 ```
 
 Layout:

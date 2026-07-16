@@ -47,6 +47,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Port for the --dashboard web server (default: 8000).",
     )
     parser.add_argument(
+        "--host", default="0.0.0.0",
+        help="Bind address for the --dashboard server (default: 0.0.0.0; "
+             "use 127.0.0.1 to restrict to this machine).",
+    )
+    parser.add_argument(
         "-v", "--verbose", action="store_true", help="Enable debug logging.",
     )
     return parser
@@ -81,7 +86,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.dashboard:
         from .dashboard import serve
 
-        serve(config, port=args.port, run_monitor=not args.serve_only)
+        # Persist UI edits back to the config file when one is in use.
+        config_path = None if args.watch else args.config
+        serve(
+            config,
+            port=args.port,
+            host=args.host,
+            run_monitor=not args.serve_only,
+            config_path=config_path,
+        )
         return 0
 
     monitor = Monitor(config)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -46,11 +47,46 @@ class Config:
             raw = json.load(fh)
         return cls.from_dict(raw)
 
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to a plain dict suitable for writing back to config.json."""
+        return {
+            "watch": [w.to_dict() for w in self.watch],
+            "notifiers": self.notifiers,
+            "interval_seconds": self.interval_seconds,
+            "jitter_seconds": self.jitter_seconds,
+            "per_product_delay": self.per_product_delay,
+            "alert_on_first_seen": self.alert_on_first_seen,
+            "track_price_drops": self.track_price_drops,
+            "active_start_hour": self.active_start_hour,
+            "active_end_hour": self.active_end_hour,
+            "proxies": self.proxies,
+            "cookies": self.cookies,
+            "headers": self.headers,
+            "pdp_template": self.pdp_template,
+            "timeout": self.timeout,
+            "max_retries": self.max_retries,
+            "state_file": self.state_file,
+            "history_file": self.history_file,
+        }
+
+    def save(self, path: str) -> None:
+        """Atomically write the config back to ``path`` (used by the UI)."""
+        directory = os.path.dirname(os.path.abspath(path)) or "."
+        os.makedirs(directory, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=directory, suffix=".tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                json.dump(self.to_dict(), fh, indent=2)
+            os.replace(tmp, path)
+        except BaseException:
+            if os.path.exists(tmp):
+                os.remove(tmp)
+            raise
+
     @classmethod
     def from_dict(cls, raw: dict[str, Any]) -> "Config":
+        # An empty watch list is allowed — the dashboard UI can populate it.
         watch_raw = raw.get("watch") or []
-        if not watch_raw:
-            raise ValueError("config must define a non-empty 'watch' list")
         watch = [WatchedProduct.from_config(entry) for entry in watch_raw]
 
         notifiers = raw.get("notifiers") or [{"type": "console"}]

@@ -100,6 +100,20 @@ class WatchedProduct:
             return True
         return _normalize_size(size) in {_normalize_size(s) for s in self.sizes}
 
+    def to_dict(self) -> dict:
+        """Serialize back to a config-style entry (for saving from the UI)."""
+        entry: dict = {"sku": self.sku}
+        if self.name:
+            entry["name"] = self.name
+        if self.url:
+            entry["url"] = self.url
+        entry["sizes"] = list(self.sizes)
+        if self.target_price is not None:
+            entry["target_price"] = self.target_price
+        if self.retailer and self.retailer != "footlocker":
+            entry["retailer"] = self.retailer
+        return entry
+
 
 def _detect_retailer(url: str) -> str:
     """Infer retailer id from a URL, defaulting to Foot Locker.
