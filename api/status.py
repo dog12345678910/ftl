@@ -55,8 +55,35 @@ SAMPLE = {
 }
 
 
+def _from_upstash() -> dict | None:
+    """Read the dashboard payload the cron job wrote to Upstash Redis."""
+    url = os.environ.get("UPSTASH_REDIS_REST_URL") or os.environ.get("KV_REST_API_URL")
+    token = os.environ.get("UPSTASH_REDIS_REST_TOKEN") or os.environ.get("KV_REST_API_TOKEN")
+    if not (url and token):
+        return None
+    try:
+        req = urllib.request.Request(
+            f"{url.rstrip('/')}/get/footlocker:status",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            result = json.loads(resp.read().decode("utf-8")).get("result")
+        if not result:
+            return None
+        data = json.loads(result)
+        data.setdefault("demo", False)
+        return data
+    except Exception:  # noqa: BLE001 - fall back to sample on any failure
+        return None
+
+
 def _payload() -> dict:
-    """Proxy a real monitor's state if MONITOR_STATE_URL is set, else sample."""
+    """Serve live state from Redis (written by the cron job) if configured;
+    otherwise proxy MONITOR_STATE_URL; otherwise sample data."""
+    live = _from_upstash()
+    if live is not None:
+        return live
+
     state_url = os.environ.get("MONITOR_STATE_URL")
     if state_url:
         try:

@@ -39,13 +39,15 @@ class StateStore:
     ``first_seen=True`` (callers can choose to suppress those).
     """
 
-    def __init__(self, path: str, track_price_drops: bool = False) -> None:
+    def __init__(self, path: Optional[str] = None, track_price_drops: bool = False) -> None:
+        # path=None means "no local persistence" — used on serverless where
+        # state lives in an external store (e.g. Redis); load _data yourself.
         self.path = path
         self.track_price_drops = track_price_drops
         self._data: dict[str, dict] = self._load()
 
     def _load(self) -> dict[str, dict]:
-        if not os.path.exists(self.path):
+        if not self.path or not os.path.exists(self.path):
             return {}
         try:
             with open(self.path, "r", encoding="utf-8") as fh:
@@ -54,7 +56,13 @@ class StateStore:
         except (json.JSONDecodeError, OSError):
             return {}
 
+    def load_data(self, data: dict) -> None:
+        """Seed state from an external source (e.g. Redis) instead of a file."""
+        self._data = dict(data or {})
+
     def save(self) -> None:
+        if not self.path:
+            return  # no-persistence mode; caller stores _data elsewhere
         directory = os.path.dirname(os.path.abspath(self.path)) or "."
         os.makedirs(directory, exist_ok=True)
         # Atomic write so a crash can't corrupt the state file.

@@ -189,25 +189,43 @@ on a cron schedule. Add a repo secret `MONITOR_CONFIG` holding your
 `config.json` (with a headless notifier), and state is cached between runs so
 you only get alerted on real restocks.
 
-### Dashboard on Vercel
+### Vercel
 
-You can host the **dashboard view** on Vercel (`vercel.json`, `api/status.py`,
-`public/index.html`). Deploy by importing the repo at
-[vercel.com/new](https://vercel.com/new), or:
+There are two ways to use Vercel. Import the repo at
+[vercel.com/new](https://vercel.com/new) (or `npm i -g vercel && vercel`) either way.
 
-```bash
-npm i -g vercel && vercel        # from the repo root, follow the prompts
-```
+**1. Dashboard only (default).** With no env vars set, the Vercel page just shows
+the dashboard UI with **sample data** so you can see it. To point it at a bot
+running elsewhere, set `MONITOR_STATE_URL` to that bot's published state JSON.
 
-> **Important:** Vercel is serverless — it **cannot** run the always-on monitor
-> loop, keep a persistent state file, or send alerts, and its datacenter IPs are
-> blocked by Foot Locker's Akamai edge. So the Vercel page shows **sample data**
-> by default, purely so you can see the UI. To show *live* data, run the actual
-> bot on a persistent host (your machine / a VPS / Docker), publish its
-> `monitor_state.json` somewhere reachable, and set the `MONITOR_STATE_URL`
-> environment variable in your Vercel project — `api/status.py` will proxy it.
-> The real monitoring, restock detection, and notifications always run in the
-> bot, not on Vercel.
+**2. Run the monitor *on* Vercel (cron).** Vercel can't run an always-on loop,
+but it can run a sweep on a schedule via **Cron Jobs**, using **Upstash Redis**
+to remember stock between runs. The pieces are already in the repo
+(`api/cron.py`, `vercel.json`'s `crons`, `footlocker_monitor/serverless.py`).
+Setup:
+
+1. Create a free **Upstash Redis** database ([upstash.com](https://upstash.com)).
+2. In your Vercel project → **Settings → Environment Variables**, add:
+
+   | Variable | Value |
+   |----------|-------|
+   | `UPSTASH_REDIS_REST_URL` | from Upstash |
+   | `UPSTASH_REDIS_REST_TOKEN` | from Upstash |
+   | `DISCORD_WEBHOOK_URL` | your Discord webhook |
+   | `WATCH_JSON` | a JSON array of products (see `watchlist.example.json`) |
+   | `PROXY_URL` | *(optional)* an https proxy — see the warning below |
+
+3. Redeploy. The cron in `vercel.json` runs `/api/cron` every 5 minutes; the
+   dashboard reads live state that the cron writes to Redis.
+
+> ⚠️ **Two real catches.** (a) Vercel's **Hobby (free) plan only runs cron once
+> per day** — you need **Pro (~$20/mo)** for the every-5-minutes schedule.
+> (b) Foot Locker's Akamai edge **blocks datacenter IPs like Vercel's**, so the
+> fetch will likely return `403` unless you route it through a residential
+> `PROXY_URL`. For most people, running the bot on your own computer or a cheap
+> always-on box (Railway/Render/Fly.io/a VPS with the included Docker image) is
+> cheaper and more reliable than Vercel for the *monitoring* — Vercel shines as
+> the *dashboard*.
 
 ## Verify it works on your network
 
@@ -261,7 +279,7 @@ stock on startup).
 
 ```bash
 pip install -r requirements.txt pytest
-python -m pytest          # 49 tests (incl. a real-socket integration test)
+python -m pytest          # 53 tests (incl. a real-socket integration test)
 ```
 
 Layout:

@@ -2,6 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "cleanUrls": true,
   "functions": {
-    "api/status.py": { "runtime": "@vercel/python@4.3.0" }
-  }
+    "api/status.py": { "runtime": "@vercel/python@4.3.0" },
+    "api/cron.py": { "runtime": "@vercel/python@4.3.0", "maxDuration": 60 }
+  },
+  "crons": [
+    { "path": "/api/cron", "schedule": "*/5 * * * *" }
+  ]
 }
