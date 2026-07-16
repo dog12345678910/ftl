@@ -1,0 +1,47 @@
+# Runs the monitor on a schedule using GitHub Actions — no server needed.
+#
+# Setup:
+#   1. Add a repo secret MONITOR_CONFIG containing your full config.json
+#      (products + a notifier that works headless, e.g. discord/telegram/webhook;
+#      console/desktop won't reach you from CI).
+#   2. Optionally adjust the cron schedule below.
+#
+# State is persisted between runs via actions/cache so you only get alerted
+# on real restocks, not on every run.
+name: Restock Monitor
+
+on:
+  schedule:
+    # Every 15 minutes, 08:00–23:00 UTC. Adjust to taste (min granularity ~5m).
+    - cron: "*/15 8-23 * * *"
+  workflow_dispatch: {}   # allow manual runs from the Actions tab
+
+concurrency:
+  group: restock-monitor
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+
+      - name: Restore restock state
+        uses: actions/cache@v4
+        with:
+          path: monitor_state.json
+          # A unique key per run + restore-keys prefix = read latest, write new.
+          key: monitor-state-${{ github.run_id }}
+          restore-keys: monitor-state-
+
+      - name: Write config from secret
+        run: printf '%s' "$MONITOR_CONFIG" > config.json
+        env:
+          MONITOR_CONFIG: ${{ secrets.MONITOR_CONFIG }}
+
+      - name: Run one sweep
+        run: python -m footlocker_monitor -c config.json --once

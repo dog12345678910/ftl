@@ -1,0 +1,46 @@
+{
+  "watch": [
+    {
+      "name": "Air Jordan 1 Retro High OG",
+      "url": "https://www.footlocker.com/product/~/314206561604.html",
+      "sizes": ["9", "9.5", "10"]
+    },
+    {
+      "name": "Nike Dunk Low (Champs)",
+      "url": "https://www.champssports.com/product/~/316153042104.html",
+      "sizes": []
+    }
+  ],
+
+  "notifiers": [
+    { "type": "console" },
+    { "type": "desktop" }
+  ],
+
+  "interval_seconds": 60,
+  "jitter_seconds": 20,
+  "per_product_delay": 1.5,
+  "alert_on_first_seen": false,
+
+  "active_start_hour": 8,
+  "active_end_hour": 23,
+
+  "state_file": "monitor_state.json",
+  "history_file": "monitor_history.jsonl",
+
+  "_notes": {
+    "goal": "Built for limited/hyped shoes that restock at random through the day — poll often and get pinged instantly.",
+    "sizes": "Empty list means alert on ANY restock; otherwise only these sizes.",
+    "retailer": "Auto-detected from the URL. Supported: footlocker, kidsfootlocker, champssports, footaction. Add 'retailer' explicitly if you only pass a sku.",
+    "active_hours": "Set both to null (remove them) to monitor 24/7.",
+    "dashboard": "Run with --dashboard to get a live web UI at http://localhost:8000.",
+    "discord_example": { "type": "discord", "webhook_url": "https://discord.com/api/webhooks/XXX/YYY", "mention": "@everyone" },
+    "telegram_example": { "type": "telegram", "bot_token": "123:ABC", "chat_id": "123456789" },
+    "email_example": { "type": "email", "host": "smtp.gmail.com", "port": 587, "username": "you@gmail.com", "password": "app-password", "to": "you@gmail.com" },
+    "sms_example": { "type": "sms", "account_sid": "ACxxx", "auth_token": "your-token", "from_number": "+15005550006", "to": "+15551234567" },
+    "slack_example": { "type": "slack", "url": "https://hooks.slack.com/services/XXX/YYY/ZZZ" },
+    "webhook_example": { "type": "webhook", "url": "https://example.com/hook", "headers": { "Authorization": "Bearer TOKEN" } },
+    "price_drops": "Optional extra: set track_price_drops=true and a per-product target_price to also alert on price falls.",
+    "proxy_and_cookies": "If you hit HTTP 403/429, add a 'proxies' and/or 'cookies' object; see README."
+  }
+}

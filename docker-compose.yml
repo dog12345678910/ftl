@@ -1,0 +1,14 @@
+services:
+  footlocker-monitor:
+    build: .
+    image: footlocker-monitor:latest
+    container_name: footlocker-monitor
+    restart: unless-stopped
+    volumes:
+      # Your config (products + notifiers) and persistent restock state.
+      - ./config.json:/app/config.json:ro
+      - ./data:/app/data
+    # Keep state in the mounted ./data dir so it survives restarts.
+    command: ["-c", "/app/config.json"]
+    environment:
+      - TZ=America/New_York   # so active-hours use your local time

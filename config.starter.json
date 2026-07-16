@@ -1,0 +1,35 @@
+{
+  "_readme": "Rename this file to config.json, then do TWO things: (1) paste your Discord webhook URL below, (2) replace the example shoes with the ones you want. That's it.",
+
+  "watch": [
+    {
+      "name": "Air Jordan 1 Retro High OG",
+      "url": "https://www.footlocker.com/product/~/314206561604.html",
+      "sizes": []
+    },
+    {
+      "name": "Nike Dunk Low",
+      "url": "https://www.footlocker.com/product/~/316153042104.html",
+      "sizes": ["9", "9.5", "10"]
+    }
+  ],
+
+  "notifiers": [
+    { "type": "console" },
+    { "type": "discord", "webhook_url": "PASTE_YOUR_DISCORD_WEBHOOK_URL_HERE" }
+  ],
+
+  "interval_seconds": 60,
+  "jitter_seconds": 20,
+  "alert_on_first_seen": false,
+
+  "state_file": "monitor_state.json",
+  "history_file": "monitor_history.jsonl",
+
+  "_notes": {
+    "sizes": "[] = alert on ANY size. Or list only the sizes you care about, e.g. [\"9\", \"10\"].",
+    "add_more_shoes": "Copy a block in 'watch' and change the url. Champs/Kids Foot Locker/Footaction URLs work too.",
+    "get_discord_webhook": "In Discord: Server Settings -> Integrations -> Webhooks -> New Webhook -> Copy Webhook URL.",
+    "dashboard": "Run with --dashboard to also get a live web page at http://localhost:8000"
+  }
+}
